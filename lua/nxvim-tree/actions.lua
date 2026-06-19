@@ -234,7 +234,7 @@ function M.delete(tree, api)
 end
 
 -- cut/copy mark a source; paste consumes it. The marked node is tinted in the render
--- (NxTreeClipboard) so the pending operation is visible.
+-- (NvimTreeCutHL / NvimTreeCopiedHL) so the pending operation is visible.
 local function mark(tree, api, op)
   local node = current(tree)
   if not node or node.depth == 0 then

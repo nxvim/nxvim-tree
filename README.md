@@ -171,8 +171,43 @@ end)
 **`on_attach`** — run once when the tree buffer exists (for buffer-scoped maps /
 options): `on_attach = function(api, bufnr) ... end`.
 
-**Highlights** — the groups (`NxTree*`) are defined only as a *fallback*, so a
-colorscheme that styles them wins. Override any of them via `opts.highlights`.
+### Highlights
+
+The explorer uses the **canonical `NvimTree*` highlight group names** from
+nvim-tree.lua — so a ported colorscheme that already styles those groups (e.g.
+[catppuccin](https://github.com/catppuccin)'s nvim-tree integration) themes the tree
+**unmodified**. The groups are:
+
+| Group                       | What it colors                         |
+| --------------------------- | -------------------------------------- |
+| `NvimTreeRootFolder`        | the root header line                   |
+| `NvimTreeFolderName`        | a closed directory name                |
+| `NvimTreeOpenedFolderName`  | an expanded directory name             |
+| `NvimTreeEmptyFolderName`   | a directory with no children           |
+| `NvimTreeFolderIcon`        | the folder glyph                       |
+| `NvimTreeIndentMarker`      | the tree guide lines                   |
+| `NvimTreeSymlink`           | a symlink name                         |
+| `NvimTreeOpenedFile`        | a file currently open in a buffer      |
+| `NvimTreeSpecialFile`       | README / Makefile / Cargo.toml …       |
+| `NvimTreeImageFile`         | image files                            |
+| `NvimTreeCutHL` / `…CopiedHL` | a node marked for move / copy        |
+| `NvimTreeLiveFilterValue`   | the active `/filter` tag               |
+| `NvimTreeGitNew` / `…Dirty` / `…Staged` / `…Deleted` | git status |
+
+A plain file's name is left unhighlighted so it inherits the window's `Normal`,
+exactly as in nvim-tree. These groups are defined only as a **fallback** — a
+colorscheme (or your `opts.highlights` override) that defines them wins, regardless
+of load order:
+
+```lua
+require("nxvim-tree").setup({
+  highlights = { NvimTreeRootFolder = { fg = "#f9e2af", bold = true } },
+})
+```
+
+Per-extension **icon colors** have no NvimTree equivalent (nvim-tree colors icons via
+nvim-web-devicons), so those live under the plugin's own `NxTreeIcon*` namespace and
+can likewise be overridden.
 
 ## Trying it locally
 

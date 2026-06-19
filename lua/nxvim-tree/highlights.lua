@@ -1,35 +1,45 @@
 -- nxvim-tree.highlights — the highlight palette and a fallback-only applier.
 --
--- `apply(overrides)` installs the tree's highlight groups, but only as a FALLBACK:
--- an explicit user override always wins; otherwise a default is defined only when
--- the group is not already defined, so a colorscheme that already styles these
--- names (or the file-icon groups it shares with other plugins) keeps its colors.
+-- The structural / git / state groups use the canonical **NvimTree\*** names from
+-- nvim-tree.lua, on purpose: a ported colorscheme that styles those names (e.g.
+-- catppuccin's nvim-tree integration) themes the explorer UNMODIFIED. We only define
+-- them as a FALLBACK — an explicit user override wins, and otherwise a default is
+-- installed only when the group is not already defined, so a colorscheme that already
+-- styles `NvimTree*` keeps its colors regardless of load order.
 --
--- The palette is Catppuccin-Mocha-ish so a bare `setup()` reads well on the default
--- dark background with no theme loaded. Group names are namespaced `NxTree*` so they
--- never collide with another plugin's.
+-- The per-extension *icon* colors have no NvimTree equivalent (upstream nvim-tree
+-- colors icons through nvim-web-devicons, not its own groups), so those stay under
+-- the plugin's own `NxTreeIcon*` namespace — a colorscheme never needs to know them,
+-- and a power user can still override them.
+--
+-- Fallback colors are Catppuccin-Mocha values so a bare `setup()` reads well on a dark
+-- background with no theme loaded. They are foreground-only (no `bg`) so applying a
+-- group to a name range never paints a background strip behind the text.
 
 local M = {}
 
--- name -> default spec (the `nx.hl.define` opts table). Structural groups first,
--- then the per-icon color groups (referenced from icons.lua).
+-- name -> default spec (the `nx.hl.define` opts table).
 M.defaults = {
-  -- structure
-  NxTreeRoot = { fg = "#f9e2af", bold = true }, -- the root header line
-  NxTreeFolderName = { fg = "#89b4fa", bold = true }, -- a directory's name
-  NxTreeFileName = { fg = "#cdd6f4" }, -- a file's name
-  NxTreeLinkName = { fg = "#94e2d5", italic = true }, -- a symlink's name
-  NxTreeIndent = { fg = "#45475a" }, -- the tree guide lines
-  NxTreeFolderIcon = { fg = "#89b4fa" }, -- the open/closed folder glyph
-  NxTreeClipboard = { fg = "#f38ba8", italic = true }, -- a cut/copied entry's name
-  NxTreeFilter = { fg = "#a6adc8", italic = true }, -- the "/filter" header
-  -- git (used by the optional git module)
-  NxTreeGitNew = { fg = "#a6e3a1" },
-  NxTreeGitModified = { fg = "#f9e2af" },
-  NxTreeGitDeleted = { fg = "#f38ba8" },
-  NxTreeGitStaged = { fg = "#94e2d5" },
-  NxTreeGitDirty = { fg = "#fab387" },
-  -- per-extension icon colors
+  -- structure (canonical NvimTree* — themed by a ported colorscheme)
+  NvimTreeRootFolder = { fg = "#b4befe", bold = true }, -- the root header line
+  NvimTreeFolderName = { fg = "#89b4fa" }, -- a closed directory's name
+  NvimTreeOpenedFolderName = { fg = "#89b4fa", bold = true }, -- an expanded directory
+  NvimTreeEmptyFolderName = { fg = "#89b4fa" }, -- a directory with no children
+  NvimTreeFolderIcon = { fg = "#89b4fa" }, -- the open/closed folder glyph
+  NvimTreeIndentMarker = { fg = "#6c7086" }, -- the tree guide lines
+  NvimTreeSymlink = { fg = "#f5c2e7" }, -- a symlink's name
+  NvimTreeOpenedFile = { fg = "#f5c2e7" }, -- a file open in a buffer
+  NvimTreeSpecialFile = { fg = "#f2cdcd" }, -- README / Makefile / Cargo.toml …
+  NvimTreeImageFile = { fg = "#cdd6f4" }, -- an image file
+  NvimTreeCutHL = { fg = "#f38ba8", italic = true }, -- a node marked to be moved
+  NvimTreeCopiedHL = { fg = "#fab387", italic = true }, -- a node marked to be copied
+  NvimTreeLiveFilterValue = { fg = "#a6adc8", italic = true }, -- the active "/filter" tag
+  -- git (canonical NvimTree* — used by the optional git module)
+  NvimTreeGitNew = { fg = "#a6e3a1" }, -- untracked / added
+  NvimTreeGitDirty = { fg = "#f9e2af" }, -- modified (and the dirty-dir dot)
+  NvimTreeGitStaged = { fg = "#94e2d5" }, -- staged-only
+  NvimTreeGitDeleted = { fg = "#f38ba8" }, -- deleted
+  -- per-extension icon colors (plugin-private; nvim-tree colors icons via devicons)
   NxTreeIconDefault = { fg = "#9399b2" },
   NxTreeIconRust = { fg = "#fab387" },
   NxTreeIconLua = { fg = "#74c7ec" },

@@ -24,6 +24,40 @@ local FILE_DEFAULT = "\u{f15b}" -- nf-fa-file
 -- ASCII fallbacks used when cfg.icons == false.
 local ASCII = { dir_closed = "▸", dir_open = "▾", file = " " }
 
+-- The kinds nvim-tree singles out for their own name color. `is_image` → the
+-- NvimTreeImageFile group; `is_special` → NvimTreeSpecialFile. Both name-based and
+-- intentionally small; extend by editing these sets.
+local IMAGE_EXTS = {
+  png = true,
+  jpg = true,
+  jpeg = true,
+  gif = true,
+  bmp = true,
+  webp = true,
+  ico = true,
+  svg = true,
+}
+local SPECIAL_NAMES = {
+  ["Cargo.toml"] = true,
+  ["Makefile"] = true,
+  ["README.md"] = true,
+  ["readme.md"] = true,
+}
+
+-- is_image(name) -> true when the basename looks like an image (by extension).
+function M.is_image(name)
+  local ext = name:match("%.([%w]+)$")
+  return ext ~= nil and IMAGE_EXTS[ext:lower()] == true
+end
+
+-- is_special(name) -> true for nvim-tree's "special file" set (README/Makefile/…).
+function M.is_special(name)
+  return SPECIAL_NAMES[name] == true
+end
+
+M._image_exts = IMAGE_EXTS
+M._special_names = SPECIAL_NAMES
+
 -- Exact-filename lookup (highest priority).
 local by_name = {
   ["Cargo.toml"] = { glyph = "\u{e7a8}", hl = "NxTreeIconRust" },
@@ -86,9 +120,9 @@ function M.get(node, cfg)
   local icons_on = not cfg or cfg.icons ~= false
   if node.type == "directory" then
     if not icons_on then
-      return (node.expanded and ASCII.dir_open or ASCII.dir_closed), "NxTreeFolderIcon"
+      return (node.expanded and ASCII.dir_open or ASCII.dir_closed), "NvimTreeFolderIcon"
     end
-    return (node.expanded and FOLDER_OPEN or FOLDER_CLOSED), "NxTreeFolderIcon"
+    return (node.expanded and FOLDER_OPEN or FOLDER_CLOSED), "NvimTreeFolderIcon"
   end
   if not icons_on then
     return ASCII.file, "NxTreeIconDefault"

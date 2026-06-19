@@ -25,17 +25,17 @@ end
 -- as staged; everything else is a modification.
 function M.classify(code)
   if code == "??" then
-    return { sign = "+", hl = "NxTreeGitNew" }
+    return { sign = "+", hl = "NvimTreeGitNew" }
   end
   local x, y = code:sub(1, 1), code:sub(2, 2)
   if x == "D" or y == "D" then
-    return { sign = "-", hl = "NxTreeGitDeleted" }
+    return { sign = "-", hl = "NvimTreeGitDeleted" }
   elseif x == "A" or y == "A" then
-    return { sign = "+", hl = "NxTreeGitNew" }
+    return { sign = "+", hl = "NvimTreeGitNew" }
   elseif y == " " and x ~= " " then
-    return { sign = "✓", hl = "NxTreeGitStaged" }
+    return { sign = "✓", hl = "NvimTreeGitStaged" }
   end
-  return { sign = "~", hl = "NxTreeGitModified" }
+  return { sign = "~", hl = "NvimTreeGitDirty" }
 end
 
 -- enable(api) — wire the decorator and the refetch autocmd. Idempotent per tree: the
@@ -48,7 +48,7 @@ function M.enable(api)
   api.register_decorator(function(node)
     if node.type == "directory" then
       if dir_dirty[node.path] then
-        return { sign_text = "•", sign_hl = "NxTreeGitDirty" }
+        return { sign_text = "•", sign_hl = "NvimTreeGitDirty" }
       end
     else
       local s = file_status[node.path]

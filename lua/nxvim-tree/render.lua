@@ -4,8 +4,9 @@
 -- line per visible node — `<indent guides><icon> <name>` — pushes them through
 -- `view:set_lines` / `view:set_userdata` (userdata[i] is the node, so on_select gets
 -- it directly), and computes a parallel batch of extmarks: indent-guide color, icon
--- color, name color (root/dir/file/link), a clipboard tint for a pending cut/copy,
--- plus whatever the registered decorators contribute (git signs, diagnostics, …).
+-- color, the canonical NvimTree* name color (root/folder/symlink/special/image/opened
+-- file; a plain file is left to the window Normal), a clipboard tint for a pending
+-- cut/copy, plus whatever the registered decorators contribute (git signs, …).
 --
 -- Decoration needs the view's real buffer number, which only exists once the
 -- create/mount ops have drained, so the `set_decor` is deferred a tick with
@@ -63,15 +64,12 @@ local function apply_filter(entries, filter)
   return out
 end
 
--- The display name for a node: the full path for the root header (with the filter
--- shown when one is active), the basename otherwise, directories suffixed "/".
-local function display_name(tree, node)
+-- The display name for a node: the full path for the root header, the basename
+-- otherwise, directories suffixed "/". (The active filter is shown as virtual text on
+-- the root line, not baked into the name — see render.)
+local function display_name(node)
   if node.depth == 0 then
-    local name = node.path
-    if tree.filter and tree.filter ~= "" then
-      name = name .. "  (/" .. tree.filter .. ")"
-    end
-    return name
+    return node.path
   end
   if node.type == "directory" then
     return node.name .. "/"
@@ -79,16 +77,43 @@ local function display_name(tree, node)
   return node.name
 end
 
--- The name highlight for a node.
-local function name_hl(node)
+-- The name highlight group for a node, using the canonical NvimTree* names so a
+-- ported colorscheme themes it. Returns nil for a plain file — it then inherits the
+-- window's Normal, exactly as in nvim-tree (which has no per-name group for plain
+-- files). `open_set` is the set of absolute paths currently open in a buffer.
+local function name_hl(node, open_set)
   if node.depth == 0 then
-    return "NxTreeRoot"
+    return "NvimTreeRootFolder"
   elseif node.type == "directory" then
-    return "NxTreeFolderName"
+    if node.loaded and #node.children == 0 then
+      return "NvimTreeEmptyFolderName"
+    end
+    return node.expanded and "NvimTreeOpenedFolderName" or "NvimTreeFolderName"
   elseif node.type == "link" then
-    return "NxTreeLinkName"
+    return "NvimTreeSymlink"
   end
-  return "NxTreeFileName"
+  if open_set[node.path] then
+    return "NvimTreeOpenedFile"
+  elseif icons.is_special(node.name) then
+    return "NvimTreeSpecialFile"
+  elseif icons.is_image(node.name) then
+    return "NvimTreeImageFile"
+  end
+  return nil -- plain file: inherit the window Normal
+end
+
+-- The set of absolute paths currently open in a buffer, for the NvimTreeOpenedFile
+-- highlight. Cheap mirror reads; recomputed each render (renders happen on tree
+-- interaction, on the watch, and on BufEnter while the tree is open).
+local function open_paths()
+  local set = {}
+  for _, b in ipairs(nx.buf.list()) do
+    local name = nx.buf.name(b)
+    if name and name ~= "" then
+      set[name] = true
+    end
+  end
+  return set
 end
 
 -- render(tree, opts) — rebuild the view's content and decoration from the model.
@@ -103,15 +128,17 @@ function M.render(tree, opts)
   end
 
   local entries = model.flatten(tree.root)
-  if tree.filter and tree.filter ~= "" then
+  local filtering = tree.filter and tree.filter ~= ""
+  if filtering then
     entries = apply_filter(entries, tree.filter)
   end
+  local open_set = open_paths()
 
   local lines, userdata, marks = {}, {}, {}
   for i, node in ipairs(entries) do
     local prefix = guide(node)
     local glyph, ghl = icons.get(node, tree.config)
-    local text = prefix .. glyph .. " " .. display_name(tree, node)
+    local text = prefix .. glyph .. " " .. display_name(node)
     lines[i] = text
     userdata[i] = node
 
@@ -122,17 +149,39 @@ function M.render(tree, opts)
     local eol = #text
 
     if pbytes > 0 then
-      marks[#marks + 1] =
-        { line = line, col = 0, end_row = line, end_col = pbytes, hl_group = "NxTreeIndent" }
+      marks[#marks + 1] = {
+        line = line,
+        col = 0,
+        end_row = line,
+        end_col = pbytes,
+        hl_group = "NvimTreeIndentMarker",
+      }
     end
     marks[#marks + 1] =
       { line = line, col = pbytes, end_row = line, end_col = pbytes + gbytes, hl_group = ghl }
 
-    -- A pending cut/copy source paints its name with the clipboard tint instead.
+    -- A pending cut/copy source paints its name with the clipboard tint; otherwise the
+    -- canonical NvimTree* name group (nil for a plain file → inherit the window Normal).
     local clip = tree._clipboard
-    local hl = (clip and clip.node == node) and "NxTreeClipboard" or name_hl(node)
-    marks[#marks + 1] =
-      { line = line, col = name_col, end_row = line, end_col = eol, hl_group = hl }
+    local hl
+    if clip and clip.node == node then
+      hl = clip.op == "copy" and "NvimTreeCopiedHL" or "NvimTreeCutHL"
+    else
+      hl = name_hl(node, open_set)
+    end
+    if hl then
+      marks[#marks + 1] =
+        { line = line, col = name_col, end_row = line, end_col = eol, hl_group = hl }
+    end
+
+    -- The active "/filter" tag, as virtual text on the root header line.
+    if node.depth == 0 and filtering then
+      marks[#marks + 1] = {
+        line = line,
+        col = eol,
+        virt_text = { { "  /" .. tree.filter, "NvimTreeLiveFilterValue" } },
+      }
+    end
 
     -- Decorators: each returns nil or { sign_text=, sign_hl=, hl=, virt_text= }.
     for _, dec in ipairs(tree.config._decorators or {}) do

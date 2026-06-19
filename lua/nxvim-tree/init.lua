@@ -380,9 +380,10 @@ end
 
 -- ----- autocmds (wired once) -------------------------------------------------
 
--- follow: reveal the file in the active window as you switch buffers (opt-in). Wired
--- once; the handler reads the live config so toggling `follow` takes effect without
--- re-registering. Ignores the tree's own buffer (set_cursor focuses it → BufEnter) to
+-- BufEnter housekeeping while the tree is open: keep the NvimTreeOpenedFile highlight
+-- fresh as you switch buffers, and — when `follow` is on — reveal the active file.
+-- Wired once; the handler reads the live config so toggling `follow` needs no
+-- re-register. Ignores the tree's own buffer (set_cursor focuses it → BufEnter) to
 -- avoid a feedback loop.
 local function wire_autocmds()
   if autocmds_wired then
@@ -390,17 +391,21 @@ local function wire_autocmds()
   end
   autocmds_wired = true
   nx.on("BufEnter", {}, function()
-    if not tree or not tree.config.follow or not tree.view:winid() then
+    if not tree or not tree.view:winid() then
       return
     end
     local cur = nx.win.buf(nx.win.current())
     if cur == tree.view:bufnr() then
       return
     end
-    local name = vim.fn.expand("%:p")
-    if name and name ~= "" then
-      M.reveal(name, { focus = false })
+    if tree.config.follow then
+      local name = vim.fn.expand("%:p")
+      if name and name ~= "" then
+        M.reveal(name, { focus = false }) -- reveal renders, refreshing the opened-file tint
+        return
+      end
     end
+    render({ restore_cursor = false }) -- refresh the opened-file highlight
   end)
 end
 
