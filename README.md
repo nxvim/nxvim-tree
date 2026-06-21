@@ -214,10 +214,11 @@ can likewise be overridden.
 This repo ships a runnable demo:
 
 ```sh
-NXVIM_CONFIG=examples cargo run -p nxvim -- examples/sample/readme.txt
+NXVIM_CONFIG=examples nxvim examples/sample/readme.txt
 ```
 
-(run from a checkout that sits next to your nxvim checkout — see `examples/init.lua`).
+(run from the repo root — the demo config in `examples/init.lua` loads the plugin
+straight from this checkout).
 
 ## Tests
 

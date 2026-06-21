@@ -1,8 +1,8 @@
 -- ~~~ Runnable demo for nxvim-tree ~~~
 --
--- Run it from a checkout that sits next to your nxvim checkout:
+-- Run it from the repo root:
 --
---     NXVIM_CONFIG=examples cargo run -p nxvim -- examples/sample/readme.txt
+--     NXVIM_CONFIG=examples nxvim examples/sample/readme.txt
 --
 -- TRY IT interactively (the sidebar opens on start):
 --   <leader>e / :NxvimTree   toggle the sidebar (left dock)
