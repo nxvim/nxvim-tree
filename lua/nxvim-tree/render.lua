@@ -64,12 +64,22 @@ local function apply_filter(entries, filter)
   return out
 end
 
--- The display name for a node: the full path for the root header, the basename
+-- The root header label: the root path made relative to the cwd — its basename when
+-- the root *is* the cwd, a cwd-relative subpath when under it, else ~-relative (home),
+-- else the absolute path. Keeps the header short and anchored to where you launched.
+local function root_label(path)
+  if path == vim.fn.getcwd() then
+    return vim.fn.fnamemodify(path, ":t")
+  end
+  return vim.fn.fnamemodify(path, ":.:~")
+end
+
+-- The display name for a node: the cwd-relative root label for the header, the basename
 -- otherwise, directories suffixed "/". (The active filter is shown as virtual text on
 -- the root line, not baked into the name — see render.)
 local function display_name(node)
   if node.depth == 0 then
-    return node.path
+    return root_label(node.path)
   end
   if node.type == "directory" then
     return node.name .. "/"
@@ -103,14 +113,16 @@ local function name_hl(node, open_set)
 end
 
 -- The set of absolute paths currently open in a buffer, for the NvimTreeOpenedFile
--- highlight. Cheap mirror reads; recomputed each render (renders happen on tree
--- interaction, on the watch, and on BufEnter while the tree is open).
+-- highlight. Buffer names are absolutized against the cwd (`:p`) so a buffer opened
+-- under a relative name still matches a node's absolute `path`. Cheap mirror reads;
+-- recomputed each render (renders happen on tree interaction, on the watch, and on
+-- BufEnter while the tree is open).
 local function open_paths()
   local set = {}
   for _, b in ipairs(nx.buf.list()) do
     local name = nx.buf.name(b)
     if name and name ~= "" then
-      set[name] = true
+      set[vim.fn.fnamemodify(name, ":p")] = true
     end
   end
   return set

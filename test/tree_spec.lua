@@ -173,6 +173,38 @@ nx.test.describe("nxvim-tree", function()
     nx.test.expect(showing).to_be(1)
   end)
 
+  -- The header and opened files are normalized relative to the cwd: with the cwd set to
+  -- the root, the header is the cwd's basename (not the absolute path) and an opened file
+  -- carries a cwd-relative buffer name. Restores the cwd so later tests are unaffected.
+  nx.test.it("shows the root and opens files relative to the cwd", function(t)
+    local prev = vim.fn.getcwd()
+    vim.cmd("cd " .. ROOT)
+    -- `:cd` drains at end-of-tick; wait until getcwd mirrors the new dir before reading it.
+    local cwd = t:wait_for(function()
+      local c = vim.fn.getcwd()
+      return c == ROOT and c
+    end)
+    tree.destroy()
+    tree.setup({ root = cwd, watch = false, toggle_key = false })
+    open_ready(t)
+
+    local header = nx.buf.lines(tree.bufnr(), 0, 1, false)[1]
+    nx.test.expect(header).to_contain(vim.fn.fnamemodify(cwd, ":t"))
+    nx.test.expect(header).never.to_contain(cwd)
+
+    t:feed("j"):feed("<CR>") -- expand src/
+    wait_contains(t, "main.rs")
+    t:feed("j"):feed("<CR>") -- open main.rs
+    -- The opened buffer's stored name is cwd-relative, not the absolute path.
+    local name = t:wait_for(function()
+      local n = vim.fn.expand("%")
+      return n ~= "" and n:find("main.rs", 1, true) and n
+    end)
+    nx.test.expect(name).to_be("src/main.rs")
+
+    vim.cmd("cd " .. prev)
+  end)
+
   -- The combination the bundled example uses (git + follow + open_on_start) must
   -- build cleanly — git.enable shells out, follow wires an autocmd, open_on_start
   -- opens during setup. A non-git tempdir leaves the tree unmarked but errorless.

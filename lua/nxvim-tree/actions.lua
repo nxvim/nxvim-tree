@@ -64,6 +64,14 @@ local function next_tick()
   end)
 end
 
+-- The path to hand nx.open: cwd-relative when the file is under the cwd (`:.`), else
+-- absolute. The editor stores a buffer's name exactly as opened (it only absolutizes
+-- for dedup), so opening relative keeps the buffer name — and everything that displays
+-- it — relative to where the editor was launched.
+local function open_target(path)
+  return vim.fn.fnamemodify(path, ":.")
+end
+
 -- Open a file node in the main editor. `mode` is "edit" | "split" | "vsplit" | "tab".
 -- Splits/tabs cross to the main layer first (so the new window is carved out of the
 -- editor, not the sidebar dock), then open the file in it.
@@ -75,7 +83,7 @@ end
 -- follows in the same later tick) then land in the editor.
 local function open_file(node, mode)
   if mode == "edit" or mode == nil then
-    nx.open(node.path, { where = "main" })
+    nx.open(open_target(node.path), { where = "main" })
     return
   end
   nx.layer.main()
@@ -87,7 +95,7 @@ local function open_file(node, mode)
   elseif mode == "tab" then
     vim.cmd("tabnew")
   end
-  nx.open(node.path)
+  nx.open(open_target(node.path))
 end
 
 -- select — the <CR>/`o` action: a directory toggles expand (lazy-loading on first
