@@ -146,6 +146,33 @@ nx.test.describe("nxvim-tree", function()
     nx.test.expect(opened).to_contain("main.rs")
   end)
 
+  -- A split/tab open must carve the new window out of the MAIN editor, not the tree
+  -- dock. The cross to main is queued and only lands after the queued split command
+  -- runs, so opening the split in the same tick would split the dock; the action yields
+  -- a tick so the focus lands first. A dock split would duplicate the tree buffer into a
+  -- second window — so "exactly one window shows the tree buffer" is the regression check.
+  nx.test.it("opens a split in the main editor with `s`, never splitting the dock", function(t)
+    open_ready(t)
+    t:feed("j"):feed("<CR>") -- expand src/
+    wait_contains(t, "main.rs")
+    t:feed("j") -- onto main.rs
+    t:feed("s") -- open in a horizontal split
+    local opened = t:wait_for(function()
+      local name = vim.fn.expand("%:p")
+      return name:find("main.rs", 1, true) and name
+    end)
+    nx.test.expect(opened).to_contain("main.rs")
+
+    local treebuf = tree.bufnr()
+    local showing = 0
+    for _, w in ipairs(nx.win.list()) do
+      if nx.win.buf(w) == treebuf then
+        showing = showing + 1
+      end
+    end
+    nx.test.expect(showing).to_be(1)
+  end)
+
   -- The combination the bundled example uses (git + follow + open_on_start) must
   -- build cleanly — git.enable shells out, follow wires an autocmd, open_on_start
   -- opens during setup. A non-git tempdir leaves the tree unmarked but errorless.

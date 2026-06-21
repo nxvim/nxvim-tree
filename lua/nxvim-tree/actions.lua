@@ -54,15 +54,32 @@ end
 
 -- ----- opening ---------------------------------------------------------------
 
+-- Yield until the next event-loop tick. A layer cross (nx.layer.main) is queued and
+-- only applied at end-of-tick — *after* the editor drains queued ex-commands — so a
+-- split issued in the same tick would target whatever layer is still focused. Awaiting
+-- this lets the focus land first. (See open_file.)
+local function next_tick()
+  return nx.promise.new(function(resolve)
+    nx.on_next_tick(resolve)
+  end)
+end
+
 -- Open a file node in the main editor. `mode` is "edit" | "split" | "vsplit" | "tab".
--- Splits/tabs cross to the main layer first (so the open lands in the editor, not the
--- sidebar), create the window, then open the file in it.
+-- Splits/tabs cross to the main layer first (so the new window is carved out of the
+-- editor, not the sidebar dock), then open the file in it.
+--
+-- The cross MUST settle before the split: `nx.layer.main()` and `vim.cmd("split")`
+-- both queue, and the editor runs queued ex-commands *before* the queued layer cross —
+-- so issuing the split in the same tick splits the still-focused tree dock. Awaiting a
+-- tick after the cross makes main the focused layer first; the split (and the open that
+-- follows in the same later tick) then land in the editor.
 local function open_file(node, mode)
   if mode == "edit" or mode == nil then
     nx.open(node.path, { where = "main" })
     return
   end
   nx.layer.main()
+  nx.await(next_tick())
   if mode == "split" then
     vim.cmd("split")
   elseif mode == "vsplit" then
