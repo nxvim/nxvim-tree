@@ -8,9 +8,10 @@
 -- file; a plain file is left to the window Normal), a clipboard tint for a pending
 -- cut/copy, plus whatever the registered decorators contribute (git signs, …).
 --
--- Decoration needs the view's real buffer number, which only exists once the
--- create/mount ops have drained, so the `set_decor` is deferred a tick with
--- `nx.schedule` (the buffer is stable by then).
+-- Decoration is painted in the SAME tick as the lines (so the tree never flashes
+-- undecorated on an update) via `view:set_decor`. That needs the view's real buffer
+-- number; it exists for every render after the first, so only the very first render —
+-- before the create/mount ops have drained — defers a tick with `nx.schedule`.
 --
 -- `opts.restore_cursor` (default false): after replacing the lines, move the cursor
 -- back onto the node it was on. Done ONLY when the tree window is the focused window
@@ -229,12 +230,20 @@ function M.render(tree, opts)
     end
   end
 
-  -- set_decor needs the backing buffer; it exists by the next tick at the latest.
-  nx.schedule(function()
-    if tree.view:bufnr() then
-      tree.view:set_decor(tree.ns, marks)
-    end
-  end)
+  -- Decoration must land in the SAME tick as the lines, or the tree flashes
+  -- undecorated on every update (watch / refresh / BufEnter). Once the view is mounted
+  -- its buffer exists, so paint synchronously here. Only the very first render — before
+  -- the create/mount ops have drained and the bufnr mirror is populated — has no buffer
+  -- yet; that one is deferred a tick, by which point the bufnr is stable.
+  if tree.view:bufnr() then
+    tree.view:set_decor(tree.ns, marks)
+  else
+    nx.schedule(function()
+      if tree.view:bufnr() then
+        tree.view:set_decor(tree.ns, marks)
+      end
+    end)
+  end
 end
 
 return M

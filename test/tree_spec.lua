@@ -221,6 +221,25 @@ nx.test.describe("nxvim-tree", function()
     nx.test.expect(wait_contains(t, "readme.txt")).to_contain("readme.txt")
   end)
 
+  -- A re-render (watch fire, refresh, BufEnter) must repaint the decoration — the
+  -- indent guides, icon/name highlights, and git signs — in the SAME tick it replaces
+  -- the lines, never a tick later, or the tree flashes undecorated on every update.
+  -- With the buffer already mounted the marks go on synchronously: wipe the namespace,
+  -- re-render, and assert the marks are back without yielding a tick.
+  nx.test.it("repaints decoration synchronously on re-render (no flicker)", function(t)
+    open_ready(t)
+    local state = tree.api.state()
+    local buf = state.view:bufnr()
+    -- The first render decorated the lines.
+    t:wait_for(function()
+      return #nx.buf.extmarks(buf, state.ns, 0, -1) > 0
+    end)
+    -- Wipe the decoration and re-render; the marks must reappear in this same chunk.
+    nx.buf.clear_namespace(buf, state.ns, 0, -1)
+    require("nxvim-tree.render").render(state, { restore_cursor = false })
+    nx.test.expect(#nx.buf.extmarks(buf, state.ns, 0, -1)).never.to_be(0)
+  end)
+
   nx.test.it("changes the root with `>` and ascends with `<`", function(t)
     open_ready(t)
     t:feed("j") -- onto src/
