@@ -29,6 +29,8 @@ write it.
   `watch`).
 - **Open anywhere** — `<CR>`/`o` opens in the main window; `s`/`v`/`t` in a
   split / vsplit / tab.
+- **Mouse** — single-click a directory to expand/collapse it, double-click a file to
+  open it, and the wheel scrolls the sidebar (configurable / disable-able like any key).
 - **Full file ops** — create (`a`), rename (`r`), delete (`d`, confirmed), cut (`x`),
   copy (`c`), paste (`p`), yank path (`y`).
 - **Navigation** — expand/collapse (`l`/`h`), expand-all/collapse-all (`E`/`W`),
@@ -130,6 +132,14 @@ require("nxvim-tree").setup({
 | `q`       | `close`         | `<Esc>` | `clear_filter`  |
 
 The full list of action names is `require("nxvim-tree.config").ACTIONS`.
+
+**Mouse** is on by default: a **single click** on a directory expands / collapses it
+(`<LeftMouse>` → `mouse_click`), a **double click** on a file opens it in the main
+editor (`<2-LeftMouse>` → `mouse_open`), and the wheel scrolls the sidebar. Files
+don't open on a single click, so a stray click never opens a buffer. Turn the mouse
+off — or remap it — like any other key, e.g. `mappings = { ["<LeftMouse>"] = false,
+["<2-LeftMouse>"] = false }`, or map `["<LeftMouse>"] = "select"` to open files on a
+single click too.
 
 ## Extending
 

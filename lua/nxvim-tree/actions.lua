@@ -98,6 +98,17 @@ local function open_file(node, mode)
   nx.open(open_target(node.path))
 end
 
+-- Toggle a directory node's expansion (lazy-loading its children on first open) and
+-- re-render, keeping the cursor on it. Shared by `select` and the single-click action.
+local function toggle_dir(tree, api, node)
+  if node.expanded then
+    node.expanded = false
+  else
+    model.expand(tree, node)
+  end
+  api.render({ restore_cursor = true })
+end
+
 -- select — the <CR>/`o` action: a directory toggles expand (lazy-loading on first
 -- open); a file opens in the main editor.
 function M.select(tree, api)
@@ -106,14 +117,46 @@ function M.select(tree, api)
     return
   end
   if node.type == "directory" then
-    if node.expanded then
-      node.expanded = false
-      api.render({ restore_cursor = true })
-    else
-      model.expand(tree, node)
-      api.render({ restore_cursor = true })
-    end
+    toggle_dir(tree, api, node)
   else
+    open_file(node, "edit")
+  end
+end
+
+-- ----- mouse -----------------------------------------------------------------
+--
+-- The two click gestures are wired in config as <LeftMouse> → mouse_click and
+-- <2-LeftMouse> → mouse_open. They lean on the editor's native <LeftMouse> default,
+-- which places the view cursor on the clicked node *before* the mapping's body runs —
+-- so both actions just read `current(tree)` (the node now under the cursor), exactly
+-- like every keyboard action. (A mouse mapping can also read the raw clicked cell via
+-- `nx.getmousepos()`, but the placed cursor is the simpler, sufficient signal here.)
+--
+-- The split of work between the two keeps the gestures NON-overlapping, so a double
+-- click never acts twice on one node: a double click fires <LeftMouse> on its first
+-- press and <2-LeftMouse> on its second. Directories react to the single click only
+-- (mouse_click toggles; mouse_open ignores them), files to the double click only
+-- (mouse_open opens; mouse_click ignores them). Net effect: single-click a directory to
+-- expand/collapse it; double-click a file to open it (and a double-click on a directory
+-- still toggles it once, via that first press).
+
+-- mouse_click — a single <LeftMouse>: toggle the DIRECTORY under the (freshly placed)
+-- cursor, the familiar click-to-expand of a file tree. A file is left selected — the
+-- cursor is already on it — so a stray single click never opens a buffer.
+function M.mouse_click(tree, api)
+  local node = current(tree)
+  if node and node.type == "directory" then
+    toggle_dir(tree, api, node)
+  end
+end
+
+-- mouse_open — a double <2-LeftMouse>: open the FILE under the cursor in the main
+-- editor. Directories are left to mouse_click (the double-click's first press already
+-- toggled the directory), so this handles files only — keeping the two gestures from
+-- ever both acting on the same node.
+function M.mouse_open(tree, api)
+  local node = current(tree)
+  if node and node.type ~= "directory" then
     open_file(node, "edit")
   end
 end

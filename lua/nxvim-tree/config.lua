@@ -16,6 +16,8 @@ local M = {}
 -- key). Kept here so `merge` can reject an unknown action-name string up front.
 M.ACTIONS = {
   select = true, -- open a file / toggle a directory (the <CR> action)
+  mouse_click = true, -- single left-click: toggle the directory under the pointer
+  mouse_open = true, -- double left-click: open the file under the pointer
   open_split = true, -- open the file in a horizontal split
   open_vsplit = true, -- open the file in a vertical split
   open_tab = true, -- open the file in a new tab
@@ -48,6 +50,8 @@ M.ACTIONS = {
 local DEFAULT_MAPPINGS = {
   ["<CR>"] = "select",
   o = "select",
+  ["<LeftMouse>"] = "mouse_click", -- single click: toggle the directory under the pointer
+  ["<2-LeftMouse>"] = "mouse_open", -- double click: open the file under the pointer
   l = "expand",
   h = "collapse",
   s = "open_split",

@@ -310,6 +310,70 @@ nx.test.describe("nxvim-tree", function()
     nx.test.expect(wait_contains(t, "extra.rs")).to_contain("extra.rs")
   end)
 
+  -- Mouse support. The editor's native <LeftMouse> default places the view cursor on
+  -- the clicked node *before* the mapped body runs (covered by the server's own
+  -- mouse.rs), so the click actions read `current(tree)` like any keyboard action. We
+  -- drive them the same way: move the cursor with a real motion, then invoke the body
+  -- the config wires to the mouse key. A double click fires mouse_click then mouse_open.
+  local actions = require("nxvim-tree.actions")
+
+  nx.test.it("wires the default left-click mappings", function()
+    local d = require("nxvim-tree.config").defaults()
+    nx.test.expect(d.mappings["<LeftMouse>"]).to_be("mouse_click")
+    nx.test.expect(d.mappings["<2-LeftMouse>"]).to_be("mouse_open")
+  end)
+
+  nx.test.it("single-clicks a directory to expand and collapse it (mouse_click)", function(t)
+    open_ready(t)
+    local state = tree.api.state()
+    t:feed("j") -- cursor onto src/ (a real click lands here via the native default)
+    actions.mouse_click(state, tree.api) -- single click expands the directory
+    nx.test.expect(wait_contains(t, "main.rs")).to_contain("main.rs")
+    actions.mouse_click(state, tree.api) -- a second single click collapses it
+    local gone = t:wait_for(function()
+      return not buf_text():find("main.rs", 1, true)
+    end)
+    nx.test.expect(gone).to_be_truthy()
+  end)
+
+  nx.test.it("single-click on a file does NOT open it (mouse_click)", function(t)
+    open_ready(t)
+    local state = tree.api.state()
+    t:feed("j"):feed("j") -- root(1) → src/(2) → readme.txt(3)
+    actions.mouse_click(state, tree.api) -- a single click on a file is a no-op
+    t:feed("") -- settle a tick
+    -- Focus never left the tree: the active buffer is not the file.
+    nx.test.expect(vim.fn.expand("%:p"):find("readme.txt", 1, true)).to_be_nil()
+  end)
+
+  nx.test.it("double-clicks a file to open it in the main editor (mouse_open)", function(t)
+    open_ready(t)
+    local state = tree.api.state()
+    t:feed("j") -- onto src/
+    actions.mouse_click(state, tree.api) -- expand it (the double-click's first press)
+    wait_contains(t, "main.rs")
+    t:feed("j") -- onto main.rs (root1 src2 main.rs3)
+    actions.mouse_open(state, tree.api) -- the second press opens the file
+    local opened = t:wait_for(function()
+      local name = vim.fn.expand("%:p")
+      return name:find("main.rs", 1, true) and name
+    end)
+    nx.test.expect(opened).to_contain("main.rs")
+  end)
+
+  -- A double click on a DIRECTORY must toggle it exactly once: the first press
+  -- (mouse_click) expands it, the second (mouse_open, file-only) ignores it. The two
+  -- gestures never both act on one node, so the directory ends up expanded, not flicked
+  -- open-then-shut.
+  nx.test.it("double-click on a directory toggles it once (gestures don't overlap)", function(t)
+    open_ready(t)
+    local state = tree.api.state()
+    t:feed("j") -- onto src/
+    actions.mouse_click(state, tree.api) -- first press: expand
+    actions.mouse_open(state, tree.api) -- second press: file-only → ignores the dir
+    nx.test.expect(wait_contains(t, "main.rs")).to_contain("main.rs")
+  end)
+
   nx.test.it("changes the root with `>` and ascends with `<`", function(t)
     open_ready(t)
     t:feed("j") -- onto src/

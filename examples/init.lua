@@ -9,6 +9,8 @@
 --   j / k                    move; <CR> / o on a dir toggles, on a file OPENS it in
 --                            the MAIN editor (not inside the sidebar)
 --   l / h                    expand / collapse (h on a leaf jumps to the parent)
+--   single-click a dir       expand / collapse it; double-click a file OPENS it;
+--                            the wheel scrolls the sidebar
 --   s / v / t                open the file in a split / vsplit / new tab
 --   E / W                    expand-all / collapse-all
 --   a                        create (end the name with "/" for a directory)
