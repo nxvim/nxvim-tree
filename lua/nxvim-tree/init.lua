@@ -58,6 +58,12 @@ local restore_wired = false
 -- `config.persist` (default true). Restore takes effect for a session-scoped launch
 -- (`--workspace` + `nx.shada.save_layout(true)`) — otherwise the persist id just rides
 -- along and nothing is restored, exactly like any other window.
+--
+-- `nx.view.on_restore` is a PULL: registering the handler (in setup(), below) also drains
+-- any slot core already reserved for us, so this restores correctly even though we load
+-- LATE — asynchronously, via `nx.plugins({ config = … })` — on a tick after core's one-shot
+-- boot dispatch. Core holds the reserved slot (deferring orphan collapse) until every eager
+-- plugin load settles, so a late registration reliably still claims it.
 local PERSIST_ID = "nxvim-tree"
 local SESSION_KEY = "session"
 -- Resolved ONCE here, on the module's own stack, so it always attributes to this plugin
@@ -66,8 +72,9 @@ local store = nx.shada.plugin()
 
 -- The snapshot a restoring session left in the store, captured at setup() time — BEFORE an
 -- `open_on_start` build (or any first render) can overwrite the store with a fresh,
--- collapsed snapshot. `on_restore` (which fires after plugins are sourced) reads THIS, not
--- the live store, so a pre-restore open can't clobber what we restore from.
+-- collapsed snapshot. The `on_restore` handler (which now drains our reserved slot the moment
+-- we register it, at setup()) reads THIS, not the live store, so a pre-restore open can't
+-- clobber what we restore from.
 local pending_restore = nil
 local restore_captured = false
 
@@ -700,11 +707,19 @@ local function wire_autocmds()
 end
 
 -- Register the cross-session restore handler (wired once). After a session restore core
--- reserves the sidebar's slot; once plugins have loaded it dispatches here with the persist
--- id and a `place` that adopts the reserved window. We rebuild the tree from our own shada
--- snapshot into that window. `M.destroy()` first drops any sidebar an `open_on_start`
--- already put up, so the restored one wins without a duplicate dock. No-op when persistence
--- is off — then no slot is ever reserved and this never fires.
+-- reserves the sidebar's slot; `nx.view.on_restore` is a PULL, so this registration itself
+-- dispatches here — synchronously, right here in setup() — with the persist id and a `place`
+-- that adopts the reserved window. We rebuild the tree from our own shada snapshot into that
+-- window. Declining a foreign id (`id ~= PERSIST_ID`) returns WITHOUT calling `place`, which
+-- leaves that slot unclaimed for its real owner — core marks a slot claimed only once `place`
+-- runs.
+--
+-- Because the pull fires at registration, restore now happens BEFORE the `open_on_start`
+-- branch in setup() (which is why setup() wires this first). `M.destroy()` stays as the
+-- ordering-agnostic guard: it drops any sidebar already up — an earlier `open_on_start`, or a
+-- prior setup() — so the restored one always wins without a duplicate dock, no matter which
+-- ran first. No-op when persistence is off — then no slot is ever reserved and this never
+-- fires.
 local function wire_restore()
   if restore_wired or not persist_enabled() then
     return
@@ -714,7 +729,7 @@ local function wire_restore()
     if id ~= PERSIST_ID then
       return
     end
-    M.destroy() -- drop any sidebar an open_on_start already put up (the restored one wins)
+    M.destroy() -- drop any sidebar already up (the restored one wins); usually a no-op now
     build({ place = place, restore = pending_restore })
   end)
 end
