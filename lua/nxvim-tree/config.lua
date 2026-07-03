@@ -92,6 +92,7 @@ local DEFAULTS = {
   icons = true, -- render Nerd-Font glyphs (false → ASCII +/- markers)
   toggle_key = "<leader>e", -- the global toggle keymap (false to skip)
   open_on_start = false, -- open the tree as soon as setup() runs
+  persist = true, -- restore the sidebar (root + expanded dirs + cursor) across a session
   mappings = DEFAULT_MAPPINGS,
   highlights = {}, -- highlight-group overrides, keyed by group name
   icon_overrides = {}, -- extra icons, merged into the icon registry (see icons.lua)

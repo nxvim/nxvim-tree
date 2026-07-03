@@ -472,4 +472,41 @@ nx.test.describe("nxvim-tree", function()
     t:feed("<")
     nx.test.expect(wait_contains(t, "readme.txt")).to_contain("readme.txt")
   end)
+
+  -- Cross-session persistence: the plugin stashes a snapshot (root + expanded dirs +
+  -- cursor) in its own shada slice on every structural change / cursor move, and rebuilds
+  -- the sidebar from it on restore. This drives the CONTENT half of that path in-process
+  -- (the window-adoption half is covered by the server session tests): expand a dir, read
+  -- back the saved snapshot, then rebuild from it and assert the dir comes back open.
+  nx.test.it("persists the expanded set + cursor and restores them across a rebuild", function(t)
+    open_ready(t)
+    t:feed("j") -- move the cursor onto src/
+    t:feed("<CR>") -- expand src/
+    wait_contains(t, "main.rs")
+
+    -- The snapshot records the root, src/ among the expanded dirs, and the cursor's node.
+    local snap = tree._session()
+    nx.test.expect(type(snap)).to_be("table")
+    nx.test.expect(snap.root).to_be(ROOT)
+    nx.test.expect(snap.expanded).to_contain(model.join(ROOT, "src"))
+    nx.test.expect(snap.cursor).to_be(model.join(ROOT, "src"))
+
+    -- Rebuilding from that snapshot (the content half of on_restore) brings src/ back
+    -- expanded — main.rs shows without a manual expand.
+    tree._restore(snap)
+    nx.test.expect(wait_contains(t, "main.rs")).to_contain("main.rs")
+  end)
+
+  -- A stale snapshot naming a directory since deleted on disk must not sink the whole
+  -- restore: the missing dir is skipped, the rest of the tree still renders.
+  nx.test.it("tolerates a stale snapshot whose expanded dir has vanished", function(t)
+    open_ready(t)
+    tree._restore({
+      root = ROOT,
+      expanded = { ROOT, model.join(ROOT, "does-not-exist"), model.join(ROOT, "src") },
+      cursor = model.join(ROOT, "src"),
+    })
+    -- src/ still expands (main.rs shows); the bogus path was silently skipped.
+    nx.test.expect(wait_contains(t, "main.rs")).to_contain("main.rs")
+  end)
 end)

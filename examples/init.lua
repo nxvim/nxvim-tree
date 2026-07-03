@@ -4,6 +4,15 @@
 --
 --     NXVIM_CONFIG=examples nxvim examples/sample/readme.txt
 --
+-- To also see SESSION PERSISTENCE, launch it session-scoped (the `save_layout` call below
+-- opts the layout into the capture):
+--
+--     NXVIM_CONFIG=examples nxvim --workspace examples examples/sample/readme.txt
+--
+-- Expand a couple of directories, move the cursor, `:qa`, then re-run the SAME command: the
+-- sidebar comes back in its dock, at the same root, with the same dirs open and the cursor
+-- on the same node.
+--
 -- TRY IT interactively (the sidebar opens on start):
 --   <leader>e / :NxvimTree   toggle the sidebar (left dock)
 --   j / k                    move; <CR> / o on a dir toggles, on a file OPENS it in
@@ -25,6 +34,11 @@
 --
 -- The leader is space here; set it before anything maps <leader>.
 vim.g.mapleader = " "
+
+-- Opt the window/tab layout into the workspace-session capture, so a `--workspace` launch
+-- restores the sidebar (root + expanded dirs + cursor) across a restart. Harmless without
+-- `--workspace` — nothing is captured then. nxvim-tree's `persist` option is on by default.
+nx.shada.save_layout(true)
 
 -- Load the plugin straight from this repo (a local-dev spec: `dir` is never cloned).
 -- A real config would instead use `{ "davidrios/nxvim-tree", config = ... }` and

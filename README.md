@@ -80,6 +80,7 @@ require("nxvim-tree").setup({
   icons = true,          -- Nerd-Font glyphs (false → ASCII markers)
   toggle_key = "<leader>e", -- global toggle keymap (false to skip)
   open_on_start = false, -- open the tree as soon as setup() runs
+  persist = true,        -- restore the sidebar across a session (see below)
   mappings = { ... },    -- key → action (see below)
   highlights = {},       -- highlight-group overrides
   icon_overrides = {},   -- extra icons, merged into the registry
@@ -90,6 +91,29 @@ require("nxvim-tree").setup({
 `setup()` is re-runnable — calling it again is a full reconfigure (merged fresh from
 the defaults), re-applying config, highlights, and commands without mounting a second
 tree.
+
+### Session persistence
+
+With `persist = true` (the default) the sidebar rides a **workspace session**: on restart
+nxvim-tree reopens it in its dock, at the same root, with the same directories expanded and
+the cursor back on the same node. The editor round-trips only a stable id and the view's
+dock slot; the plugin keeps the actual snapshot (root + expanded dirs + cursor) in its own
+isolated [`nx.shada`](https://github.com/davidrios/nxvim) slice and rebuilds the content in
+an `nx.view.on_restore` handler — a stale snapshot whose directory has since vanished
+degrades gracefully (the missing dir is skipped, never a failed restore).
+
+It takes effect when the **session itself is captured**, which is a launch-time choice:
+
+```lua
+nx.shada.save_layout(true) -- opt the window/tab layout into the session capture
+```
+
+```sh
+nxvim --workspace .        -- run session-scoped (captures + restores the layout)
+```
+
+Without those, the persist id simply rides along and nothing is restored — exactly like
+any other window. Set `persist = false` to opt out entirely.
 
 ### Commands
 
