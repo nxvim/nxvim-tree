@@ -31,6 +31,22 @@ local function wait_contains(t, needle)
   end)
 end
 
+-- How many open windows show a buffer whose basename is `name`.
+local function count_showing(name)
+  local n = 0
+  for _, w in ipairs(nx.win.list()) do
+    if vim.fn.fnamemodify(vim.api.nvim_buf_get_name(nx.win.buf(w)), ":t") == name then
+      n = n + 1
+    end
+  end
+  return n
+end
+
+-- The basename of the focused window's buffer.
+local function current_name()
+  return vim.fn.fnamemodify(vim.fn.expand("%:p"), ":t")
+end
+
 -- Open the tree, wait until it has rendered and its action maps are live, and focus
 -- it so buffer-local keys fire.
 local function open_ready(t)
@@ -171,6 +187,43 @@ nx.test.describe("nxvim-tree", function()
       end
     end
     nx.test.expect(showing).to_be(1)
+  end)
+
+  -- Opening a file that is already shown in a main-editor window must JUMP to that
+  -- window ('switchbuf'), not reload a duplicate into the focused one. The action
+  -- passes `nx.open(..., { reuse = true })`; the regression is a second window
+  -- ending up on the same file (and the other file getting clobbered).
+  nx.test.it("jumps to an already-open window instead of duplicating it on <CR>", function(t)
+    open_ready(t)
+    local main_rs = model.join(ROOT, "src/main.rs")
+    local readme = model.join(ROOT, "readme.txt")
+
+    -- Lay out two main-editor windows: A shows main.rs, B (focused) shows readme.txt.
+    nx.open(main_rs, { where = "main" }) -- cross to the editor
+    t:wait_for(function()
+      return current_name() == "main.rs" and true
+    end)
+    t:feed(":only<CR>") -- collapse to a single main window (window A = main.rs)
+    t:feed(":vsplit<CR>") -- window B, still on main.rs…
+    t:feed(":edit " .. readme .. "<CR>") -- …now on readme.txt (the current window)
+    t:wait_for(function()
+      return current_name() == "readme.txt" and count_showing("main.rs") == 1 and true
+    end)
+
+    -- Reveal main.rs in the tree (focuses the sidebar, cursor on its node) and open it.
+    -- reuse must FOCUS window A, leaving window B (readme.txt) untouched — never
+    -- reloading main.rs into window B (which would clobber readme.txt).
+    tree.reveal(main_rs)
+    t:wait_for(function()
+      return vim.api.nvim_get_current_buf() == tree.bufnr() and true
+    end)
+    t:feed("<CR>")
+    local jumped = t:wait_for(function()
+      return current_name() == "main.rs" and count_showing("readme.txt") == 1 and true
+    end)
+    nx.test.expect(jumped).to_be_truthy()
+    nx.test.expect(count_showing("main.rs")).to_be(1) -- no duplicate window
+    nx.test.expect(count_showing("readme.txt")).to_be(1) -- readme.txt not clobbered
   end)
 
   -- The header and opened files are normalized relative to the cwd: with the cwd set to

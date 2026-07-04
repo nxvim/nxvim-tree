@@ -83,6 +83,8 @@ end
 -- follows in the same later tick) then land in the editor.
 local function open_file(node, mode)
   if mode == "edit" or mode == nil then
+    -- nx.open defaults to 'switchbuf'-honoring reuse: if the file is already open in
+    -- a window, jump to it instead of reloading a duplicate into the main window.
     nx.open(open_target(node.path), { where = "main" })
     return
   end
@@ -95,7 +97,9 @@ local function open_file(node, mode)
   elseif mode == "tab" then
     vim.cmd("tabnew")
   end
-  nx.open(open_target(node.path))
+  -- reuse = false: this is an explicit split/tab gesture, so put the file into the
+  -- window we just made rather than jumping to another window already showing it.
+  nx.open(open_target(node.path), { reuse = false })
 end
 
 -- Toggle a directory node's expansion (lazy-loading its children on first open) and
