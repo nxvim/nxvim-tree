@@ -25,7 +25,7 @@
 --
 -- Quick start (init.lua):
 --   require("nxvim-tree").setup({ width = 32, git = true })
---   -- then <leader>e or :NxvimTree toggles the sidebar.
+--   -- then <leader>e or :Tree toggles the sidebar.
 
 local config = require("nxvim-tree.config")
 local highlights = require("nxvim-tree.highlights")
@@ -757,24 +757,24 @@ function M.setup(opts)
     icons.register(M.config.icon_overrides)
   end
 
-  -- A live tree adopts the new config (so :NxvimTree, dock side, mappings stay sane).
+  -- A live tree adopts the new config (so :Tree, dock side, mappings stay sane).
   if tree then
     tree.config = M.config
   end
 
-  nx.command("NxvimTree", function()
+  nx.command("Tree", function()
     M.toggle()
   end, { desc = "Toggle the nxvim-tree file explorer" })
-  nx.command("NxvimTreeOpen", function()
+  nx.command("TreeOpen", function()
     M.open()
   end, { desc = "Open + focus the nxvim-tree file explorer" })
-  nx.command("NxvimTreeClose", function()
+  nx.command("TreeClose", function()
     M.close()
   end, { desc = "Close the nxvim-tree file explorer" })
-  nx.command("NxvimTreeRefresh", function()
+  nx.command("TreeRefresh", function()
     M.refresh()
   end, { desc = "Re-scan the nxvim-tree file explorer" })
-  nx.command("NxvimTreeReveal", function()
+  nx.command("TreeReveal", function()
     M.reveal()
   end, { desc = "Reveal the current file in nxvim-tree" })
 

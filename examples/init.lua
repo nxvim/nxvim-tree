@@ -14,7 +14,7 @@
 -- on the same node.
 --
 -- TRY IT interactively (the sidebar opens on start):
---   <leader>e / :NxvimTree   toggle the sidebar (left dock)
+--   <leader>e / :Tree   toggle the sidebar (left dock)
 --   j / k                    move; <CR> / o on a dir toggles, on a file OPENS it in
 --                            the MAIN editor (not inside the sidebar)
 --   l / h                    expand / collapse (h on a leaf jumps to the parent)

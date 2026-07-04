@@ -61,7 +61,7 @@ nx.plugins({
 })
 ```
 
-Then run `:PluginSync` to clone it, and press `<leader>e` (or run `:NxvimTree`).
+Then run `:PluginSync` to clone it, and press `<leader>e` (or run `:Tree`).
 
 ## Configuration
 
@@ -119,11 +119,11 @@ any other window. Set `persist = false` to opt out entirely.
 
 | Command             | Action                                  |
 | ------------------- | --------------------------------------- |
-| `:NxvimTree`        | toggle the sidebar                      |
-| `:NxvimTreeOpen`    | open + focus the sidebar                |
-| `:NxvimTreeClose`   | hide the sidebar                        |
-| `:NxvimTreeRefresh` | re-scan the whole tree                  |
-| `:NxvimTreeReveal`  | reveal the file in the current window   |
+| `:Tree`             | toggle the sidebar                      |
+| `:TreeOpen`         | open + focus the sidebar                |
+| `:TreeClose`        | hide the sidebar                        |
+| `:TreeRefresh`      | re-scan the whole tree                  |
+| `:TreeReveal`       | reveal the file in the current window   |
 
 ### Key bindings
 
