@@ -407,6 +407,25 @@ local function build(opts)
     tree.view:mount({ dock = M.config.position, size = M.config.width })
   end
 
+  -- Sidebar chrome (like nvim-tree): a darker window background and hidden `~`
+  -- fillers, plus a highlighted current row. The background remap rides the DOCK
+  -- (keyed by side, not a window id) so it survives the dock being parked/revealed
+  -- across `:NvimTreeToggle` and the restore path; `cursorline` is a window option,
+  -- so it must ride the tree window itself once its id settles (a tick after mount).
+  local WINHL = "Normal:NvimTreeNormal,EndOfBuffer:NvimTreeEndOfBuffer,"
+    .. "CursorLine:NvimTreeCursorLine,CursorLineNr:NvimTreeCursorLineNr"
+  nx.dock.opt(M.config.position).winhighlight = WINHL
+  nx.wait_for(function()
+    return tree.view:winid()
+  end, { tries = 100, interval = 10, message = "nxvim-tree: window never appeared for chrome setup" })
+    :next(function(win)
+      -- Also set the remap on the window directly, so a restore slot that isn't a
+      -- dock still gets the darker background.
+      nx.wo[win].winhighlight = WINHL
+      nx.wo[win].cursorline = true
+    end)
+    :catch(function() end)
+
   run(function()
     if restore then
       restore_expansion(tree, restore.expanded or {})

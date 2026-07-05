@@ -562,4 +562,26 @@ nx.test.describe("nxvim-tree", function()
     -- src/ still expands (main.rs shows); the bogus path was silently skipped.
     nx.test.expect(wait_contains(t, "main.rs")).to_contain("main.rs")
   end)
+
+  -- Sidebar chrome (like nvim-tree): the tree window remaps Normal→NvimTreeNormal
+  -- (its own darker background) and turns on `cursorline` to highlight the row. The
+  -- background remap rides the dock (so it survives parking/restore); cursorline is
+  -- a window option on the tree window itself.
+  nx.test.it("gives the sidebar a dark background (winhighlight) and cursorline", function(t)
+    open_ready(t)
+    local view = tree.api.state().view
+    local win = t:wait_for(function()
+      return view:winid()
+    end)
+    -- The window option is applied a tick after mount (winid settles cross-tick).
+    t:wait_for(function()
+      return nx.wo[win].cursorline == true
+    end)
+    nx.test.expect(nx.wo[win].cursorline).to_be_truthy()
+    -- The dock carries the Normal→NvimTreeNormal remap (read back from its opt cache;
+    -- the default tree position is "left").
+    local whl = nx.dock.opt("left").winhighlight or ""
+    nx.test.expect(whl:find("Normal:NvimTreeNormal", 1, true)).to_be_truthy()
+    nx.test.expect(whl:find("EndOfBuffer:NvimTreeEndOfBuffer", 1, true)).to_be_truthy()
+  end)
 end)

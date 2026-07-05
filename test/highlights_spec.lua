@@ -43,4 +43,29 @@ nx.test.describe("nxvim-tree.highlights", function()
     highlights.apply({ NvimTreeRootFolder = { fg = "#123456" } })
     nx.test.expect(nx.hl.get(0, { name = "NvimTreeRootFolder" }).fg).to_be(0x123456)
   end)
+
+  -- The sidebar's window chrome (background / cursorline / hidden `~` fillers) is
+  -- remapped through the tree window's `winhighlight`, so these groups must exist
+  -- and — unlike the fg-only text groups — carry a background.
+  nx.test.it("defines window-chrome fallbacks with a background", function()
+    highlights.apply({})
+    for _, name in ipairs({
+      "NvimTreeNormal",
+      "NvimTreeEndOfBuffer",
+      "NvimTreeCursorLine",
+      "NvimTreeCursorLineNr",
+    }) do
+      nx.test.expect(nx.hl.exists(name)).to_be_truthy()
+    end
+    -- NvimTreeNormal is the darker sidebar background — it must define `bg`.
+    nx.test.expect(nx.hl.get(0, { name = "NvimTreeNormal" }).bg).to_be(0x181825)
+  end)
+
+  nx.test.it("does NOT overwrite a colorscheme's NvimTreeNormal background", function()
+    -- A ported colorscheme (e.g. catppuccin) sets the sidebar bg first; the
+    -- fallback must yield so the theme's shade survives regardless of load order.
+    nx.hl.define(0, "NvimTreeNormal", { fg = "#cdd6f4", bg = "#222233" })
+    highlights.apply({})
+    nx.test.expect(nx.hl.get(0, { name = "NvimTreeNormal" }).bg).to_be(0x222233)
+  end)
 end)

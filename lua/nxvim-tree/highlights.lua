@@ -20,6 +20,18 @@ local M = {}
 
 -- name -> default spec (the `nx.hl.define` opts table).
 M.defaults = {
+  -- Window chrome (the sidebar's own background, cursorline, and hidden `~`
+  -- fillers) — the canonical NvimTree* names a ported colorscheme themes. Unlike
+  -- the text groups below these DO carry a `bg`: they are applied through the
+  -- tree window's `winhighlight` remap (`Normal:NvimTreeNormal`, …), never to a
+  -- name range, so they paint the window rather than a strip behind text. The
+  -- fallbacks are Catppuccin-Mocha `mantle`/`surface0`, so a bare `setup()` gives
+  -- the sidebar a darker shade than the document — matching nvim-tree's look — and
+  -- a colorscheme that defines these (e.g. catppuccin) still wins (see M.apply).
+  NvimTreeNormal = { fg = "#cdd6f4", bg = "#181825" }, -- the sidebar background
+  NvimTreeEndOfBuffer = { fg = "#181825", bg = "#181825" }, -- hide the `~` fillers
+  NvimTreeCursorLine = { bg = "#313244" }, -- the highlighted current row
+  NvimTreeCursorLineNr = { fg = "#cdd6f4", bg = "#313244", bold = true },
   -- structure (canonical NvimTree* — themed by a ported colorscheme)
   NvimTreeRootFolder = { fg = "#b4befe", bold = true }, -- the root header line
   NvimTreeFolderName = { fg = "#89b4fa" }, -- a closed directory's name
